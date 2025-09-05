@@ -20,7 +20,7 @@ export { GTMProvider, useGTMContext } from './providers';
 export { useGTM, useCookieConsent } from './hooks';
 
 // Components
-export { RouteChangeListener, CookieConsent } from './components';
+export { RouteChangeListener, RouteChangeListenerWithParams, CookieConsent } from './components';
 
 // Version
 export const VERSION = '0.1.0';
