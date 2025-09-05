@@ -1,5 +1,5 @@
 {
-  "name": "@bisasoft/gtm-tracker",
+  "name": "@arasismail/gtm-tracker",
   "version": "0.1.0",
   "type": "module",
   "description": "GTM implementation for Next.js projects by Bisasoft",
@@ -15,7 +15,7 @@
     "test": "echo \"No test specified\"",
     "lint": "eslint src/",
     "prepare": "npm run build",
-    "prepublishOnly": "npm run lint"
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "gtm",
