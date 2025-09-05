@@ -1,9 +1,10 @@
 // src/providers/GTMProvider.tsx
 'use client';
 
-import React, { createContext, useContext, useEffect, ReactNode } from 'react';
+import * as React from 'react';
 import Script from 'next/script';
-import { GTMConfig, ConsentSettings } from '../types';
+import { ConsentSettings } from '../types';
+import { isClient } from '../utils/isClient';
 import { 
   initializeConsent, 
   pushEvent, 
@@ -11,6 +12,8 @@ import {
   updateConsent as updateConsentCore 
 } from '../lib/gtm';
 import { DEFAULT_CONSENT_SETTINGS } from '../constants';
+
+const { createContext, useContext, useEffect } = React;
 
 interface GTMContextValue {
   gtmId: string;
@@ -22,7 +25,7 @@ interface GTMContextValue {
 const GTMContext = createContext<GTMContextValue | undefined>(undefined);
 
 interface GTMProviderProps {
-  children: ReactNode;
+  children: React.ReactNode;
   gtmId: string;
   debug?: boolean;
   enableInDevelopment?: boolean;
@@ -42,6 +45,8 @@ export function GTMProvider({
   const shouldLoad = process.env.NODE_ENV === 'production' || enableInDevelopment;
 
   useEffect(() => {
+    if (!isClient) return;
+    
     if (!shouldLoad) {
       if (debug) {
         console.log('🚫 GTM disabled in development mode');

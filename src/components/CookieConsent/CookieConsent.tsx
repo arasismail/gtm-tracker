@@ -1,9 +1,11 @@
 // src/components/CookieConsent/CookieConsent.tsx
 'use client';
 
-import React, { useState } from 'react';
+import * as React from 'react';
 import { useCookieConsent } from '../../hooks/useCookieConsent';
 import { CookieConsentProps } from '../../types';
+
+const { useState } = React;
 
 export function CookieConsent({
   title = 'Cookie Settings',
@@ -16,7 +18,6 @@ export function CookieConsent({
   position = 'bottom'
 }: CookieConsentProps) {
   const { 
-    consentStatus, 
     acceptAll, 
     rejectAll,
     isConsentGiven 

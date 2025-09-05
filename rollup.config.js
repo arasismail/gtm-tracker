@@ -1,4 +1,3 @@
-// rollup.config.js güncelle
 import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import typescript from '@rollup/plugin-typescript';
@@ -7,11 +6,28 @@ import terser from '@rollup/plugin-terser';
 import dts from 'rollup-plugin-dts';
 import { readFileSync } from 'fs';
 
-const packageJson = JSON.parse(
-  readFileSync('./package.json', 'utf-8')
-);
+const packageJson = JSON.parse(readFileSync('./package.json', 'utf-8'));
+
+// 'use client' directive'ini koruyacak plugin
+const preserveDirectives = () => ({
+  name: 'preserve-directives',
+  renderChunk(code, chunk) {
+    // Dosya başında 'use client' varsa koru
+    const hasUseClient = code.includes("'use client'") || code.includes('"use client"');
+    if (hasUseClient) {
+      // Mevcut directive'i temizle ve başa ekle
+      const cleanCode = code.replace(/['"]use client['"];?\s*/g, '');
+      return {
+        code: `'use client';\n${cleanCode}`,
+        map: null
+      };
+    }
+    return null;
+  }
+});
 
 export default [
+  // Main build configuration
   {
     input: 'src/index.ts',
     output: [
@@ -33,21 +49,42 @@ export default [
     plugins: [
       peerDepsExternal(),
       resolve({
-        extensions: ['.js', '.jsx', '.ts', '.tsx']
+        extensions: ['.js', '.jsx', '.ts', '.tsx'],
+        preferBuiltins: false
       }),
       commonjs(),
       typescript({ 
-        tsconfig: './tsconfig.json'
+        tsconfig: './tsconfig.json',
+        declaration: true,
+        declarationDir: 'dist',
+        exclude: ['**/*.test.ts', '**/*.test.tsx']
       }),
-      terser()
+      // Directive'leri koru
+      preserveDirectives(),
+      // Terser'da directive'leri korumayı sağla
+      terser({
+        compress: {
+          directives: false, // Directive'leri silme
+          keep_fnames: true  // Function isimlerini koru
+        },
+        mangle: false // İsimleri karıştırma (opsiyonel)
+      })
     ],
-    external: ['react', 'react-dom', 'next/router', 'next/script', 'next/navigation'],
-    onwarn: (warning, warn) => {
-      // 'use client' directive uyarısını görmezden gel
-      if (warning.code === 'MODULE_LEVEL_DIRECTIVE') {
-        return;
-      }
-      warn(warning);
-    }
+    external: [
+      'react', 
+      'react-dom', 
+      'react/jsx-runtime',
+      'next/router', 
+      'next/script', 
+      'next/navigation', 
+      'js-cookie'
+    ]
+  },
+  // Type definitions build
+  {
+    input: 'src/index.ts',
+    output: [{ file: 'dist/index.d.ts', format: 'es' }],
+    plugins: [dts()],
+    external: [/\.css$/]
   }
 ];

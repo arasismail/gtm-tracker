@@ -9,7 +9,7 @@ declare global {
 /**
  * Push event to GTM dataLayer
  */
-export function pushEvent(eventName: string, parameters?: Record<string, any>) {
+export function pushEvent(eventName: string, parameters?: Record<string, unknown>) {
   if (typeof window === 'undefined') return;
   
   window.dataLayer = window.dataLayer || [];
@@ -26,12 +26,12 @@ export function pushEvent(eventName: string, parameters?: Record<string, any>) {
 /**
  * Update consent status
  */
-export function updateConsent(consentSettings: Record<string, any>) {
+export function updateConsent(consentSettings: Record<string, unknown>) {
   if (typeof window === 'undefined') return;
   
-  window.gtag = window.gtag || function() {
+  window.gtag = window.gtag || function(...args: any[]) {
     window.dataLayer = window.dataLayer || [];
-    window.dataLayer.push(arguments);
+    window.dataLayer.push(...args);
   };
   
   window.gtag('consent', 'update', consentSettings);
@@ -40,12 +40,12 @@ export function updateConsent(consentSettings: Record<string, any>) {
 /**
  * Initialize default consent
  */
-export function initializeConsent(defaultSettings: Record<string, any>) {
+export function initializeConsent(defaultSettings: Record<string, unknown>) {
   if (typeof window === 'undefined') return;
   
-  window.gtag = window.gtag || function() {
+  window.gtag = window.gtag || function(...args: any[]) {
     window.dataLayer = window.dataLayer || [];
-    window.dataLayer.push(arguments);
+    window.dataLayer.push(...args);
   };
   
   window.gtag('consent', 'default', defaultSettings);

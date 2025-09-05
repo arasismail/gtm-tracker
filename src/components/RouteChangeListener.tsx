@@ -1,9 +1,11 @@
 // src/components/RouteChangeListener.tsx
 'use client';
 
-import { useEffect } from 'react';
+import * as React from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useGTM } from '../hooks/useGTM';
+
+const { useEffect } = React;
 
 export function RouteChangeListener() {
   const pathname = usePathname();
