@@ -366,7 +366,7 @@ For issues and feature requests, please use [GitHub Issues](https://github.com/a
 
 ## Changelog
 
-### v0.1.0 (2024-01-05)
+### v0.1.0 (2024-01-06)
 - Initial release
 - GTM integration for Next.js
 - Cookie consent management
