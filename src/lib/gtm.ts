@@ -31,11 +31,22 @@ export function updateConsent(consentSettings: Record<string, unknown>) {
   
   window.gtag = window.gtag || function(...args: any[]) {
     window.dataLayer = window.dataLayer || [];
-    window.dataLayer.push(...args);
+    window.dataLayer.push(args);
   };
   
+  // Update consent with gtag
   window.gtag('consent', 'update', consentSettings);
-  pushEvent('consent_update', consentSettings);
+  
+  // Push consent update event to dataLayer
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push({
+    'event': 'consent_update',
+    ...consentSettings
+  });
+  
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔐 Consent updated:', consentSettings);
+  }
 }
 /**
  * Initialize default consent

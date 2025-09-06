@@ -43,25 +43,6 @@ export function GTMProvider({
   // Development modda çalışmasını kontrol et
   const shouldLoad = process.env.NODE_ENV === 'production' || enableInDevelopment;
 
-  // Initialize consent immediately in component body before GTM loads
-  if (typeof window !== 'undefined' && shouldLoad) {
-    // Ensure we only initialize once
-    if (!(window as any).__consentInitialized) {
-      window.dataLayer = window.dataLayer || [];
-      window.gtag = window.gtag || function(...args: any[]) {
-        window.dataLayer!.push(args);
-      };
-
-      // Set consent defaults BEFORE GTM loads
-      window.gtag('consent', 'default', defaultConsent);
-      (window as any).__consentInitialized = true;
-
-      if (debug) {
-        console.log('🔐 Consent initialized before GTM:', defaultConsent);
-      }
-    }
-  }
-
   useEffect(() => {
     if (!isClient) return;
     
@@ -123,8 +104,16 @@ export function GTMProvider({
             function gtag(){dataLayer.push(arguments);}
             window.gtag = gtag;
             
-            // Consent MUST be set before GTM loads
-            gtag('consent', 'default', ${JSON.stringify(defaultConsent)});
+            // Set wait_for_update to wait for user consent
+            gtag('consent', 'default', {
+              ...${JSON.stringify(defaultConsent)},
+              'wait_for_update': 2000
+            });
+            
+            // Push initial dataLayer event
+            window.dataLayer.push({
+              'event': 'consent_default_set'
+            });
           `
         }}
       />

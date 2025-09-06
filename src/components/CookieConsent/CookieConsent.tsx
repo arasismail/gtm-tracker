@@ -20,13 +20,27 @@ export function CookieConsent({
   const { 
     acceptAll, 
     rejectAll,
-    isConsentGiven 
+    isConsentGiven,
+    consentStatus 
   } = useCookieConsent();
   
   const [showCustomize, setShowCustomize] = useState(false);
+  const [isVisible, setIsVisible] = useState(!isConsentGiven);
 
-  // Don't show if consent already given
-  if (isConsentGiven) {
+  // Handle accept button click
+  const handleAccept = () => {
+    acceptAll();
+    setIsVisible(false);
+  };
+
+  // Handle reject button click
+  const handleReject = () => {
+    rejectAll();
+    setIsVisible(false);
+  };
+
+  // Don't show if consent already given or not visible
+  if (!isVisible || isConsentGiven) {
     return null;
   }
 
@@ -61,7 +75,7 @@ export function CookieConsent({
           
           <div className="flex gap-2">
             <button
-              onClick={rejectAll}
+              onClick={handleReject}
               className="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 transition-colors"
             >
               {rejectLabel}
@@ -75,7 +89,7 @@ export function CookieConsent({
             </button>
             
             <button
-              onClick={acceptAll}
+              onClick={handleAccept}
               className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
             >
               {acceptLabel}

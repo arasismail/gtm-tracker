@@ -53,5 +53,5 @@ export const DEFAULT_CONSENT_SETTINGS = {
   [CONSENT_TYPES.SECURITY]: CONSENT_MODES.GRANTED
 };
 
-export const COOKIE_NAME = 'bisasoft-cookie-consent';
+export const COOKIE_NAME = 'gtm_consent';
 export const COOKIE_EXPIRY_DAYS = 365;

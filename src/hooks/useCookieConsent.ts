@@ -30,6 +30,12 @@ export function useCookieConsent(): UseCookieConsentReturn {
         // Update GTM immediately with saved consent
         if (window.gtag) {
           window.gtag('consent', 'update', parsed.settings);
+          // Also push to dataLayer for tracking
+          window.dataLayer = window.dataLayer || [];
+          window.dataLayer.push({
+            'event': 'consent_restored',
+            'consent_settings': parsed.settings
+          });
         }
         return { status: parsed.status, settings: parsed.settings };
       } catch (error) {
@@ -60,11 +66,27 @@ export function useCookieConsent(): UseCookieConsentReturn {
     
     Cookies.set(COOKIE_NAME, JSON.stringify(consentData), { 
       expires: COOKIE_EXPIRY_DAYS,
-      sameSite: 'lax'
+      sameSite: 'lax',
+      secure: true
     });
     
     setConsentStatus(status);
     setConsentSettings(settings);
+    
+    // Update GTM consent directly
+    if (typeof window !== 'undefined' && window.gtag) {
+      window.gtag('consent', 'update', settings);
+      
+      // Push event to dataLayer for tracking
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({
+        'event': 'consent_update',
+        'consent_status': status,
+        'consent_settings': settings
+      });
+    }
+    
+    // Also call the context updateConsent for consistency
     updateConsent(settings);
   }, [updateConsent]);
 
