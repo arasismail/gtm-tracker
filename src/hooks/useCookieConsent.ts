@@ -15,27 +15,40 @@ import {
 import { useGTM } from './useGTM';
 
 export function useCookieConsent(): UseCookieConsentReturn {
-  const [consentStatus, setConsentStatus] = useState<ConsentStatus>('pending');
-  const [consentSettings, setConsentSettings] = useState<ConsentSettings>(DEFAULT_CONSENT_SETTINGS);
   const { updateConsent } = useGTM();
-
-  // Load saved consent on mount
-  useEffect(() => {
-    const savedConsent = Cookies.get(COOKIE_NAME);
+  
+  // Read consent synchronously on initialization
+  const getInitialConsent = (): { status: ConsentStatus; settings: ConsentSettings } => {
+    if (typeof window === 'undefined') {
+      return { status: 'pending', settings: DEFAULT_CONSENT_SETTINGS };
+    }
     
+    const savedConsent = Cookies.get(COOKIE_NAME);
     if (savedConsent) {
       try {
         const parsed = JSON.parse(savedConsent);
-        setConsentStatus(parsed.status);
-        setConsentSettings(parsed.settings);
-        
-        // Update GTM with saved consent
-        updateConsent(parsed.settings);
+        // Update GTM immediately with saved consent
+        if (window.gtag) {
+          window.gtag('consent', 'update', parsed.settings);
+        }
+        return { status: parsed.status, settings: parsed.settings };
       } catch (error) {
         console.error('Failed to parse consent cookie:', error);
       }
     }
-  }, [updateConsent]);
+    
+    return { status: 'pending', settings: DEFAULT_CONSENT_SETTINGS };
+  };
+  
+  const initial = getInitialConsent();
+  const [consentStatus, setConsentStatus] = useState<ConsentStatus>(initial.status);
+  const [consentSettings, setConsentSettings] = useState<ConsentSettings>(initial.settings);
+
+  // Keep useEffect only for subscription/monitoring purposes if needed
+  useEffect(() => {
+    // Can be used for listening to consent changes from other tabs/windows
+    // or for other side effects
+  }, []);
 
   // Save consent to cookie
   const saveConsent = useCallback((status: ConsentStatus, settings: ConsentSettings) => {

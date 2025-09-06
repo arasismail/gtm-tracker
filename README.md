@@ -1,64 +1,36 @@
-# gtm-tracker## README.md Güncellemesi
+# GTM Tracker
 
-İşte profesyonel ve detaylı bir README:
+Next.js uygulamaları için TypeScript tabanlı Google Tag Manager (GTM) entegrasyon paketi. Cookie consent yönetimi ve Google Consent Mode v2 desteği ile birlikte gelir.
 
-```markdown
-# @arasismail/gtm-tracker
+## Özellikler
 
-A comprehensive Google Tag Manager (GTM) implementation for Next.js applications with built-in cookie consent management, TypeScript support, and GDPR/KVKK compliance.
+- 🚀 **Kolay GTM Entegrasyonu**: Next.js uygulamanıza tek satırla GTM ekleyin
+- 🍪 **Cookie Consent Yönetimi**: GDPR/KVKK uyumlu hazır consent banner
+- 📊 **Google Consent Mode v2**: Otomatik consent durumu yönetimi
+- 🎯 **TypeScript Desteği**: Tam tip güvenliği ile geliştirme
+- 🔄 **Otomatik Route Takibi**: Next.js route değişimlerini otomatik takip
+- 🎨 **Özelleştirilebilir**: Consent banner'ı tamamen özelleştirilebilir
+- 🔧 **Debug Modu**: Geliştirme sırasında detaylı loglama
+- 🔐 **CSP Desteği**: Content Security Policy nonce desteği
 
-## Features
-
-- 🚀 **Easy GTM Integration** - Simple setup for Next.js App Router and Pages Router
-- 🍪 **Cookie Consent Management** - GDPR/KVKK compliant consent banner
-- 📊 **Google Analytics 4 Support** - Seamless GA4 integration through GTM
-- 🔄 **SPA Route Tracking** - Automatic route change detection for Next.js
-- 📝 **TypeScript Support** - Full type safety and IntelliSense
-- 🎯 **Custom Event Helpers** - Pre-built functions for common tracking needs
-- ⚡ **Lightweight** - Only ~3KB gzipped
-- 🔒 **Consent Mode v2** - Google's latest consent framework support
-- 🐛 **Debug Mode** - Built-in debugging for development
-
-## Installation
-
-### Using npm with GitHub Packages (Private)
-
-First, create a `.npmrc` file in your project root:
+## Kurulum
 
 ```bash
-@arasismail:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN
+npm install @your-org/gtm-tracker
+# veya
+yarn add @your-org/gtm-tracker
+# veya
+pnpm add @your-org/gtm-tracker
 ```
 
-Then install:
+## Hızlı Başlangıç
 
-```bash
-npm install @arasismail/gtm-tracker
-```
+### 1. GTMProvider'ı Uygulamanıza Ekleyin
 
-### Using GitHub URL (Public)
+`app/layout.tsx` veya `pages/_app.tsx` dosyanızda:
 
-```bash
-npm install github:arasismail/gtm-tracker
-```
-
-Or add to `package.json`:
-
-```json
-{
-  "dependencies": {
-    "gtm-tracker": "github:arasismail/gtm-tracker"
-  }
-}
-```
-
-## Quick Start
-
-### Basic Setup (App Router)
-
-```typescript
-// app/layout.tsx
-import { GTMProvider, CookieConsent, RouteChangeListener } from '@arasismail/gtm-tracker';
+```tsx
+import { GTMProvider } from '@your-org/gtm-tracker';
 
 export default function RootLayout({
   children,
@@ -66,16 +38,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="tr">
       <body>
         <GTMProvider 
-          gtmId={process.env.NEXT_PUBLIC_GTM_ID!}
-          debug={process.env.NODE_ENV === 'development'}
-          enableInDevelopment={true}
+          gtmId="GTM-XXXXXXX"
+          auth="your-auth-key" // Opsiyonel: GTM environment için
+          preview="env-preview" // Opsiyonel: GTM environment için
         >
           {children}
-          <RouteChangeListener />
-          <CookieConsent />
         </GTMProvider>
       </body>
     </html>
@@ -83,295 +53,339 @@ export default function RootLayout({
 }
 ```
 
-### Environment Variables
+### 2. Cookie Consent Banner'ı Ekleyin
 
-Create a `.env.local` file:
+```tsx
+import { CookieConsent } from '@your-org/gtm-tracker';
 
-```bash
-NEXT_PUBLIC_GTM_ID=GTM-XXXXXXX
+export default function App() {
+  return (
+    <>
+      {/* Uygulama içeriğiniz */}
+      <CookieConsent />
+    </>
+  );
+}
 ```
 
-## Usage Examples
+### 3. Route Değişimlerini Takip Edin
 
-### Custom Event Tracking
+```tsx
+import { RouteChangeListener } from '@your-org/gtm-tracker';
 
-```typescript
-import { useGTM } from '@arasismail/gtm-tracker';
+export default function App() {
+  return (
+    <>
+      <RouteChangeListener />
+      {/* Uygulama içeriğiniz */}
+    </>
+  );
+}
+```
 
-export function ContactForm() {
-  const { trackFormSubmit } = useGTM();
+## Detaylı Kullanım
 
-  const handleSubmit = async (data) => {
-    // Your form submission logic
-    await submitForm(data);
-    
-    // Track the event
-    trackFormSubmit('contact_form', {
-      email: data.email,
-      subject: data.subject
+### GTM Event'leri Göndermek
+
+```tsx
+import { useGTM } from '@your-org/gtm-tracker';
+
+function ProductPage() {
+  const { pushEvent } = useGTM();
+
+  const handleAddToCart = () => {
+    pushEvent({
+      event: 'add_to_cart',
+      ecommerce: {
+        currency: 'TRY',
+        value: 99.99,
+        items: [{
+          item_id: 'SKU123',
+          item_name: 'Ürün Adı',
+          price: 99.99,
+          quantity: 1
+        }]
+      }
     });
   };
 
   return (
-    // Your form JSX
-  );
-}
-```
-
-### Button Click Tracking
-
-```typescript
-import { useGTM } from '@arasismail/gtm-tracker';
-
-export function HeroSection() {
-  const { trackButtonClick } = useGTM();
-
-  return (
-    <button 
-      onClick={() => trackButtonClick('hero_cta', 'Get Started')}
-    >
-      Get Started
+    <button onClick={handleAddToCart}>
+      Sepete Ekle
     </button>
   );
 }
 ```
 
-### File Download Tracking
+### Cookie Consent Yönetimi
 
-```typescript
-import { useGTM } from '@arasismail/gtm-tracker';
+```tsx
+import { useCookieConsent } from '@your-org/gtm-tracker';
 
-export function DownloadSection() {
-  const { trackFileDownload } = useGTM();
+function MyComponent() {
+  const { 
+    consentState, 
+    updateConsent, 
+    resetConsent 
+  } = useCookieConsent();
 
-  const handleDownload = (filename: string, type: string) => {
-    trackFileDownload(filename, type);
-    // Trigger download
+  // Mevcut consent durumunu kontrol et
+  console.log(consentState);
+  // { analytics: true, marketing: false, personalization: false, functionality: true }
+
+  // Consent'i güncelle
+  const handleAcceptMarketing = () => {
+    updateConsent({ marketing: true });
+  };
+
+  // Tüm consent'leri sıfırla
+  const handleResetAll = () => {
+    resetConsent();
   };
 
   return (
-    <button onClick={() => handleDownload('catalog.pdf', 'pdf')}>
-      Download Catalog
-    </button>
+    <div>
+      <button onClick={handleAcceptMarketing}>
+        Pazarlama Çerezlerini Kabul Et
+      </button>
+      <button onClick={handleResetAll}>
+        Tercihlerimi Sıfırla
+      </button>
+    </div>
   );
 }
 ```
 
-### Direct Event Push
+### Özel Cookie Consent Banner
 
-```typescript
-import { pushEvent, GTM_EVENTS } from '@arasismail/gtm-tracker';
+```tsx
+import { CookieConsent } from '@your-org/gtm-tracker';
 
-// Anywhere in your code
-pushEvent(GTM_EVENTS.VIDEO_PLAY, {
-  video_title: 'Product Demo',
-  video_duration: 120,
-  video_provider: 'youtube'
-});
-```
-
-## Cookie Consent Management
-
-The package includes a customizable cookie consent banner:
-
-```typescript
-<CookieConsent 
-  title="Cookie Policy"
-  description="We use cookies to enhance your experience."
-  acceptLabel="Accept All"
-  rejectLabel="Reject"
-  privacyPolicyUrl="/privacy"
-  position="bottom"
-/>
-```
-
-### Cookie Consent Hook
-
-```typescript
-import { useCookieConsent } from '@arasismail/gtm-tracker';
-
-export function MyComponent() {
-  const { 
-    consentStatus,    // 'pending' | 'accepted' | 'rejected' | 'partial'
-    acceptAll,        // Function to accept all cookies
-    rejectAll,        // Function to reject all cookies
-    isConsentGiven    // Boolean
-  } = useCookieConsent();
-
-  // Use consent status in your logic
-  if (!isConsentGiven) {
-    return <div>Please accept cookies to continue</div>;
-  }
+function App() {
+  return (
+    <CookieConsent
+      position="bottom-left"
+      theme="dark"
+      buttonText="Kabul Et"
+      declineButtonText="Reddet"
+      customizeButtonText="Özelleştir"
+      message="Web sitemizde size daha iyi hizmet verebilmek için çerezler kullanıyoruz."
+      privacyPolicyUrl="/gizlilik-politikasi"
+      cookiePolicyUrl="/cerez-politikasi"
+      onAccept={(consentState) => {
+        console.log('Kabul edildi:', consentState);
+      }}
+      onDecline={() => {
+        console.log('Reddedildi');
+      }}
+      className="custom-consent-banner"
+      style={{ backgroundColor: '#1a1a1a' }}
+    />
+  );
 }
 ```
 
-## Available Events
+### Debug Modu
 
-Pre-defined event constants for consistency:
+Geliştirme sırasında detaylı loglama için:
 
-```typescript
-import { GTM_EVENTS } from '@arasismail/gtm-tracker';
-
-// Page events
-GTM_EVENTS.PAGE_VIEW
-GTM_EVENTS.VIRTUAL_PAGE_VIEW
-
-// User interactions
-GTM_EVENTS.BUTTON_CLICK
-GTM_EVENTS.LINK_CLICK
-GTM_EVENTS.SCROLL_DEPTH
-
-// Form events
-GTM_EVENTS.FORM_START
-GTM_EVENTS.FORM_SUBMIT
-GTM_EVENTS.FORM_ERROR
-
-// Content events
-GTM_EVENTS.FILE_DOWNLOAD
-GTM_EVENTS.VIDEO_PLAY
-GTM_EVENTS.VIDEO_PAUSE
-GTM_EVENTS.VIDEO_COMPLETE
-
-// E-commerce (optional)
-GTM_EVENTS.VIEW_ITEM
-GTM_EVENTS.ADD_TO_CART
-GTM_EVENTS.PURCHASE
-
-// Consent
-GTM_EVENTS.CONSENT_UPDATE
+```tsx
+<GTMProvider 
+  gtmId="GTM-XXXXXXX"
+  debug={true}
+>
+  {children}
+</GTMProvider>
 ```
 
-## GTM Configuration
+### CSP (Content Security Policy) Desteği
 
-### Required GTM Setup
-
-1. Create a Google Tag Manager account and container
-2. Add Google Analytics 4 Configuration tag
-3. Set up triggers for custom events
-4. Configure Consent Mode v2
-
-### Recommended GTM Variables
-
-Create these Data Layer Variables in GTM:
-
-- `event` - Event name
-- `form_name` - Form identifier
-- `button_label` - Button text
-- `file_name` - Downloaded file name
-- `video_title` - Video name
-
-### Example GTM Trigger
-
-For form submissions:
-
-```
-Trigger Type: Custom Event
-Event Name: form_submit
-This trigger fires on: All Custom Events
+```tsx
+<GTMProvider 
+  gtmId="GTM-XXXXXXX"
+  nonce="your-csp-nonce"
+>
+  {children}
+</GTMProvider>
 ```
 
-## Advanced Configuration
+## API Referansı
 
 ### GTMProvider Props
 
-```typescript
-interface GTMProviderProps {
-  gtmId: string;                    // Your GTM container ID
-  debug?: boolean;                   // Enable console logging
-  enableInDevelopment?: boolean;     // Load GTM in development
-  defaultConsent?: ConsentSettings; // Initial consent state
-  nonce?: string;                   // CSP nonce value
-}
+| Prop | Tip | Zorunlu | Açıklama |
+|------|-----|---------|----------|
+| `gtmId` | `string` | ✅ | Google Tag Manager container ID'si |
+| `auth` | `string` | ❌ | GTM environment auth parametresi |
+| `preview` | `string` | ❌ | GTM environment preview parametresi |
+| `debug` | `boolean` | ❌ | Debug modunu aktifleştirir (default: false) |
+| `nonce` | `string` | ❌ | CSP nonce değeri |
+| `children` | `ReactNode` | ✅ | Uygulama içeriği |
+
+### CookieConsent Props
+
+| Prop | Tip | Açıklama |
+|------|-----|----------|
+| `position` | `'bottom-left' \| 'bottom-right' \| 'top-left' \| 'top-right'` | Banner pozisyonu |
+| `theme` | `'light' \| 'dark'` | Tema seçimi |
+| `buttonText` | `string` | Kabul butonu metni |
+| `declineButtonText` | `string` | Reddet butonu metni |
+| `customizeButtonText` | `string` | Özelleştir butonu metni |
+| `message` | `string` | Banner mesajı |
+| `privacyPolicyUrl` | `string` | Gizlilik politikası linki |
+| `cookiePolicyUrl` | `string` | Çerez politikası linki |
+| `onAccept` | `(consentState: ConsentState) => void` | Kabul callback'i |
+| `onDecline` | `() => void` | Reddetme callback'i |
+| `className` | `string` | Özel CSS class |
+| `style` | `CSSProperties` | Inline style |
+
+### useGTM Hook
+
+```tsx
+const { pushEvent, dataLayer } = useGTM();
 ```
 
-### Consent Settings
+- `pushEvent(data: DataLayerObject)`: DataLayer'a event gönderir
+- `dataLayer`: Window dataLayer referansı
 
-```typescript
-const customConsent = {
-  analytics_storage: 'denied',
-  ad_storage: 'denied',
-  ad_user_data: 'denied',
-  ad_personalization: 'denied',
-  functionality_storage: 'granted',
-  security_storage: 'granted'
-};
+### useCookieConsent Hook
 
-<GTMProvider 
-  gtmId="GTM-XXXXXX"
-  defaultConsent={customConsent}
->
+```tsx
+const { 
+  consentState, 
+  updateConsent, 
+  resetConsent,
+  acceptAll,
+  declineAll 
+} = useCookieConsent();
 ```
 
-## TypeScript Support
+- `consentState`: Mevcut consent durumu
+- `updateConsent(updates: Partial<ConsentState>)`: Consent'i günceller
+- `resetConsent()`: Tüm consent'leri sıfırlar
+- `acceptAll()`: Tüm kategorileri kabul eder
+- `declineAll()`: Tüm kategorileri reddeder
 
-The package is fully typed. Import types as needed:
+## GTM'de Desteklenen Tag'ler
 
-```typescript
-import type { 
-  GTMConfig,
-  ConsentSettings,
-  ConsentStatus,
-  GTMEvent 
-} from '@arasismail/gtm-tracker';
+Bu paket GTM container'ınıza eklediğiniz **tüm tag türlerini** destekler:
+
+- ✅ Google Analytics 4 (GA4)
+- ✅ Google Ads (Conversion Tracking, Remarketing)
+- ✅ Facebook Pixel
+- ✅ LinkedIn Insight Tag
+- ✅ Twitter Pixel
+- ✅ TikTok Pixel
+- ✅ Hotjar
+- ✅ Microsoft Clarity
+- ✅ Custom HTML Tags
+- ✅ Ve GTM'de kurduğunuz diğer tüm tag'ler
+
+## Consent Kategorileri
+
+Google Consent Mode v2 ile uyumlu 4 kategori:
+
+- **analytics_storage**: Analitik çerezleri (GA4, vb.)
+- **ad_storage**: Reklam çerezleri (Google Ads, Facebook Pixel, vb.)
+- **ad_personalization**: Kişiselleştirilmiş reklamlar
+- **ad_user_data**: Kullanıcı verisi paylaşımı
+
+## Örnek Projeler
+
+### E-Ticaret Entegrasyonu
+
+```tsx
+// Ürün görüntüleme
+pushEvent({
+  event: 'view_item',
+  ecommerce: {
+    currency: 'TRY',
+    value: 150.00,
+    items: [{
+      item_id: 'SKU123',
+      item_name: 'Ürün Adı',
+      item_category: 'Kategori',
+      price: 150.00,
+      quantity: 1
+    }]
+  }
+});
+
+// Satın alma
+pushEvent({
+  event: 'purchase',
+  ecommerce: {
+    transaction_id: '12345',
+    value: 350.00,
+    currency: 'TRY',
+    items: [...]
+  }
+});
 ```
 
-## Debug Mode
+### Form Takibi
 
-Enable debug mode to see all GTM events in console:
-
-```typescript
-<GTMProvider 
-  gtmId="GTM-XXXXXX"
-  debug={true}
->
+```tsx
+// Form gönderimi
+pushEvent({
+  event: 'form_submit',
+  form_name: 'contact_form',
+  form_destination: '/api/contact'
+});
 ```
 
-Console output:
+### Özel Event'ler
+
+```tsx
+// Video izleme
+pushEvent({
+  event: 'video_play',
+  video_title: 'Ürün Tanıtımı',
+  video_duration: 120
+});
+
+// Dosya indirme
+pushEvent({
+  event: 'file_download',
+  file_name: 'katalog.pdf',
+  file_type: 'pdf'
+});
 ```
-🚀 GTM initialized with ID: GTM-XXXXXX
-📤 Event pushed: form_submit {form_name: "contact"}
-📄 Page view: /about
-🔐 Consent updated: {analytics_storage: "granted"}
+
+## Geliştirme
+
+### Projeyi Klonlama
+
+```bash
+git clone https://github.com/your-org/gtm-tracker.git
+cd gtm-tracker
+npm install
 ```
 
-## Browser Support
+### Komutlar
 
-- Chrome/Edge 90+
-- Firefox 88+
-- Safari 14+
-- Opera 76+
+```bash
+npm run build       # Kütüphaneyi derle
+npm run dev         # Watch modunda geliştirme
+npm run lint        # ESLint kontrolü
+```
 
-## Requirements
+### Katkıda Bulunma
 
-- Next.js 12.0.0 or higher
-- React 17.0.0 or higher
-- TypeScript 4.0.0 or higher (optional)
+1. Fork yapın
+2. Feature branch oluşturun (`git checkout -b feature/amazing-feature`)
+3. Değişikliklerinizi commit edin (`git commit -m 'feat: Add amazing feature'`)
+4. Branch'inizi push edin (`git push origin feature/amazing-feature`)
+5. Pull Request açın
 
-## License
+## Lisans
 
 MIT
 
-## Contributing
+## Destek
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Sorularınız veya önerileriniz için [issue](https://github.com/your-org/gtm-tracker/issues) açabilirsiniz.
 
-## Support
+---
 
-For issues and feature requests, please use [GitHub Issues](https://github.com/arasismail/gtm-tracker/issues).
-
-## Author
-
-**İsmail Aras**
-- GitHub: [@arasismail](https://github.com/arasismail)
-
-## Changelog
-
-### v0.1.0 (2024-01-05)
-- Initial release
-- GTM integration for Next.js
-- Cookie consent management
-- TypeScript support
-- Route change tracking
-- Custom event helpers
-```
-
+Made with ❤️ for Next.js developers

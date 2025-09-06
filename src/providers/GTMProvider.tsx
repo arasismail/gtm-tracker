@@ -6,7 +6,6 @@ import Script from 'next/script';
 import { ConsentSettings } from '../types';
 import { isClient } from '../utils/isClient';
 import { 
-  initializeConsent, 
   pushEvent, 
   pushPageView as pushPageViewCore,
   updateConsent as updateConsentCore 
@@ -44,6 +43,25 @@ export function GTMProvider({
   // Development modda çalışmasını kontrol et
   const shouldLoad = process.env.NODE_ENV === 'production' || enableInDevelopment;
 
+  // Initialize consent immediately in component body before GTM loads
+  if (typeof window !== 'undefined' && shouldLoad) {
+    // Ensure we only initialize once
+    if (!(window as any).__consentInitialized) {
+      window.dataLayer = window.dataLayer || [];
+      window.gtag = window.gtag || function(...args: any[]) {
+        window.dataLayer!.push(args);
+      };
+
+      // Set consent defaults BEFORE GTM loads
+      window.gtag('consent', 'default', defaultConsent);
+      (window as any).__consentInitialized = true;
+
+      if (debug) {
+        console.log('🔐 Consent initialized before GTM:', defaultConsent);
+      }
+    }
+  }
+
   useEffect(() => {
     if (!isClient) return;
     
@@ -53,9 +71,6 @@ export function GTMProvider({
       }
       return;
     }
-
-    // Initialize default consent - cast to Record<string, any>
-    initializeConsent(defaultConsent as Record<string, any>);
 
     if (debug) {
       console.log('🚀 GTM initialized with ID:', gtmId);
@@ -97,10 +112,27 @@ export function GTMProvider({
 
   return (
     <GTMContext.Provider value={contextValue}>
-      {/* GTM Script */}
+      {/* Phase 1: Set consent defaults before GTM loads */}
+      <Script
+        id="consent-defaults"
+        strategy="beforeInteractive"
+        nonce={nonce}
+        dangerouslySetInnerHTML={{
+          __html: `
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            window.gtag = gtag;
+            
+            // Consent MUST be set before GTM loads
+            gtag('consent', 'default', ${JSON.stringify(defaultConsent)});
+          `
+        }}
+      />
+      
+      {/* Phase 2: Load GTM */}
       <Script
         id="gtm-script"
-        strategy="afterInteractive"
+        strategy="beforeInteractive"
         nonce={nonce}
         dangerouslySetInnerHTML={{
           __html: `
