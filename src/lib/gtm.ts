@@ -7,6 +7,36 @@ declare global {
 }
 
 /**
+ * Initialize default consent - GTM yüklenmeden önce çağrılmalı!
+ */
+export function initializeConsent(defaultSettings: Record<string, unknown>) {
+  if (typeof window === 'undefined') return;
+  
+  // DataLayer'ı initialize et
+  window.dataLayer = window.dataLayer || [];
+  
+  // Consent'i dataLayer'a push et (GTM yüklenmeden önce!)
+  window.dataLayer.push({
+    'event': 'consent_default',
+    'consent': 'default',
+    ...defaultSettings
+  });
+  
+  // gtag fonksiyonunu initialize et
+  window.gtag = window.gtag || function(...args: any[]) {
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push(arguments);
+  };
+  
+  // gtag ile de consent'i ayarla
+  window.gtag('consent', 'default', defaultSettings);
+  
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔐 Consent initialized before GTM:', defaultSettings);
+  }
+}
+
+/**
  * Push event to GTM dataLayer
  */
 export function pushEvent(eventName: string, parameters?: Record<string, unknown>) {
@@ -31,24 +61,11 @@ export function updateConsent(consentSettings: Record<string, unknown>) {
   
   window.gtag = window.gtag || function(...args: any[]) {
     window.dataLayer = window.dataLayer || [];
-    window.dataLayer.push(...args);
+    window.dataLayer.push(arguments);
   };
   
   window.gtag('consent', 'update', consentSettings);
   pushEvent('consent_update', consentSettings);
-}
-/**
- * Initialize default consent
- */
-export function initializeConsent(defaultSettings: Record<string, unknown>) {
-  if (typeof window === 'undefined') return;
-  
-  window.gtag = window.gtag || function(...args: any[]) {
-    window.dataLayer = window.dataLayer || [];
-    window.dataLayer.push(...args);
-  };
-  
-  window.gtag('consent', 'default', defaultSettings);
 }
 
 /**
