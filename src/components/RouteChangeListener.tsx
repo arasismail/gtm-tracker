@@ -5,21 +5,28 @@ import * as React from 'react';
 import { usePathname } from 'next/navigation';
 import { useGTM } from '../hooks/useGTM';
 
-const { useEffect } = React;
+const { useEffect, useRef } = React;
 
-/**
- * Listens to route changes and pushes page view events to GTM
- * Note: GTM automatically captures query parameters, so we only track pathname
- */
 export function RouteChangeListener() {
   const pathname = usePathname();
   const { pushPageView } = useGTM();
+  const lastPathname = useRef<string | null>(null);
 
   useEffect(() => {
-    // Push page view with pathname only
-    // GTM will automatically capture any query parameters
+    // İlk mount'ta skip et
+    if (lastPathname.current === null) {
+      lastPathname.current = pathname;
+      return;
+    }
+    
+    // Aynı pathname için tekrar gönderme
+    if (lastPathname.current === pathname) {
+      return;
+    }
+    
+    lastPathname.current = pathname;
     pushPageView(pathname);
-  }, [pathname, pushPageView]);
+  }, [pathname]); // pushPageView ve isFirstMount dependency'den çıkarıldı
 
   return null;
 }
