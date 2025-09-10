@@ -24,6 +24,12 @@ export function initializeConsent(defaultSettings: Record<string, unknown>) {
   // SADECE gtag command kullan - duplicate event'i önlemek için
   window.gtag('consent', 'default', defaultSettings);
   
+  // GTM'nin beklediği formatta consent_default event'i gönder
+  window.dataLayer.push({
+    event: 'consent_default',
+    ...defaultSettings  // Direkt spread - wrapper olmadan
+  });
+  
   if (process.env.NODE_ENV === 'development') {
     console.log('🔐 Consent initialized before GTM:', defaultSettings);
   }
@@ -47,27 +53,36 @@ export function pushEvent(eventName: string, parameters?: Record<string, unknown
 }
 
 /**
- * Update consent status
+ * Update consent status - GTM uyumlu format
  */
 export function updateConsent(consentSettings: Record<string, unknown>) {
   if (typeof window === 'undefined') return;
   
+  // DataLayer'ı kesinlikle initialize et
+  window.dataLayer = window.dataLayer || [];
+  
+  // gtag fonksiyonunu initialize et
   window.gtag = window.gtag || function(...args: unknown[]) {
-    window.dataLayer = window.dataLayer || [];
-    window.dataLayer.push(args);
+    window.dataLayer!.push(args);  // ! ile undefined olmadığını belirt
   };
   
   // gtag ile consent'i güncelle
   window.gtag('consent', 'update', consentSettings);
   
-  // consent_update event'ini manuel olarak gönder
-  // GTMProvider'daki duplicate kontrolü sayesinde tekrar etmeyecek
-  pushEvent('consent_update', {
-    consent_settings: consentSettings
+  // GTM'nin beklediği formatta consent_update event'i gönder
+  // TypeScript'e dataLayer'ın tanımlı olduğunu söyle
+  window.dataLayer!.push({  
+    event: 'consent_update',
+    ...consentSettings,  // Direkt spread - wrapper olmadan
+    timestamp: new Date().toISOString()
   });
   
   if (process.env.NODE_ENV === 'development') {
     console.log('🔐 Consent updated via gtag:', consentSettings);
+    console.log('📊 DataLayer format:', {
+      event: 'consent_update',
+      ...consentSettings
+    });
   }
 }
 
