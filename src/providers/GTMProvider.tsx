@@ -62,10 +62,10 @@ export function GTMProvider({
         wait_for_update: 500 // Wait up to 500ms for consent update
       });
       
-      // Also push as an event for visibility in dataLayer
+      // Also push as an event for visibility in dataLayer - GTM FORMAT (NO WRAPPER)
       window.dataLayer.push({
         event: 'consent_default',
-        consent_settings: defaultConsent
+        ...defaultConsent  // ✅ DIREKT SPREAD - WRAPPER YOK
       });
       
       if (debug) {
@@ -117,20 +117,9 @@ export function GTMProvider({
   const updateConsentStable = useCallback((consentSettings: Record<string, any>) => {
     if (!shouldLoad || !isConsentInitialized) return;
     
-    // Use gtag to update consent
-    window.gtag = window.gtag || function(...args: any[]) {
-      window.dataLayer = window.dataLayer || [];
-      window.dataLayer.push(args);
-    };
-    
-    // Update consent via gtag
-    window.gtag('consent', 'update', consentSettings);
-    
-    // Also push as event for tracking
-    pushEvent('consent_update', {
-      consent_settings: consentSettings,
-      timestamp: new Date().toISOString()
-    });
+    // updateConsentCore fonksiyonu zaten doğru formatta gönderiyor
+    // Sadece onu çağırmamız yeterli
+    updateConsentCore(consentSettings);
     
     if (debug) {
       console.log('🔐 Consent updated:', consentSettings);
