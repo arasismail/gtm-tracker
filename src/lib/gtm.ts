@@ -15,20 +15,13 @@ export function initializeConsent(defaultSettings: Record<string, unknown>) {
   // DataLayer'ı initialize et
   window.dataLayer = window.dataLayer || [];
   
-  // Consent'i dataLayer'a push et (GTM yüklenmeden önce!)
-  window.dataLayer.push({
-    'event': 'consent_default',
-    'consent': 'default',
-    ...defaultSettings
-  });
-  
   // gtag fonksiyonunu initialize et
   window.gtag = window.gtag || function(...args: unknown[]) {
     window.dataLayer = window.dataLayer || [];
     window.dataLayer.push(args);
   };
   
-  // gtag ile de consent'i ayarla
+  // SADECE gtag command kullan - duplicate event'i önlemek için
   window.gtag('consent', 'default', defaultSettings);
   
   if (process.env.NODE_ENV === 'development') {

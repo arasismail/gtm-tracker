@@ -55,7 +55,7 @@ export function GTMProvider({
     
     isInitialized.current = true; // Sadece 1 kez çalışmasını garantile
     
-    // Consent'i initialize et (GTM yüklenmeden önce!)
+    // Consent'i hemen ayarla
     initializeConsent(defaultConsent as Record<string, any>);
     setIsConsentInitialized(true);
     
@@ -63,15 +63,13 @@ export function GTMProvider({
       console.log('🔐 Consent initialized with:', defaultConsent);
     }
     
-    // Consent initialize edildikten sonra GTM'i yükle
-    // Küçük bir delay ile consent'in dataLayer'a yazılmasını garantile
-    setTimeout(() => {
-      setShouldLoadGTM(true);
-      if (debug) {
-        console.log('🚀 GTM loading after consent initialization');
-      }
-    }, 100);
-  }, []); // Boş dependency array - çok önemli!
+    // GTM'i hemen yükle (timeout olmadan)
+    setShouldLoadGTM(true);
+    
+    if (debug) {
+      console.log('🚀 GTM loading after consent initialization');
+    }
+  }, []); // Boş dependency array - tek seferlik çalışır
 
   // Stable updateConsent with duplicate check
   const updateConsentStable = useCallback((settings: Record<string, any>) => {
