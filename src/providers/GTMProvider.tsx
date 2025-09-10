@@ -13,7 +13,7 @@ import {
 } from '../lib/gtm';
 import { DEFAULT_CONSENT_SETTINGS } from '../constants';
 
-const { createContext, useContext, useEffect, useState } = React;
+const { createContext, useContext, useEffect, useState, useRef, useCallback } = React;
 
 interface GTMContextValue {
   gtmId: string;
@@ -44,12 +44,16 @@ export function GTMProvider({
 }: GTMProviderProps) {
   const [isConsentInitialized, setIsConsentInitialized] = useState(false);
   const [shouldLoadGTM, setShouldLoadGTM] = useState(false);
+  const isInitialized = useRef(false);
+  const lastConsentState = useRef<string>('');
   
   const shouldLoad = process.env.NODE_ENV === 'production' || enableInDevelopment;
 
-  // İlk olarak consent'i initialize et
+  // İlk olarak consent'i initialize et - Sadece bir kez çalışacak
   useEffect(() => {
-    if (!isClient || !shouldLoad) return;
+    if (!isClient || !shouldLoad || isInitialized.current) return;
+    
+    isInitialized.current = true; // Sadece 1 kez çalışmasını garantile
     
     // Consent'i initialize et (GTM yüklenmeden önce!)
     initializeConsent(defaultConsent as Record<string, any>);
@@ -67,34 +71,49 @@ export function GTMProvider({
         console.log('🚀 GTM loading after consent initialization');
       }
     }, 100);
-  }, [shouldLoad, defaultConsent, gtmId, debug]);
+  }, []); // Boş dependency array - çok önemli!
+
+  // Stable updateConsent with duplicate check
+  const updateConsentStable = useCallback((settings: Record<string, any>) => {
+    const settingsStr = JSON.stringify(settings);
+    
+    // Duplicate kontrolü - aynı consent tekrar gönderilmesin
+    if (lastConsentState.current === settingsStr) {
+      if (debug) {
+        console.log('🔐 Consent already in this state, skipping update');
+      }
+      return;
+    }
+    
+    lastConsentState.current = settingsStr;
+    updateConsentCore(settings);
+    
+    if (debug) {
+      console.log('🔐 Consent updated:', settings);
+    }
+  }, [debug]);
 
   // Context value
   const contextValue: GTMContextValue = {
     gtmId,
     isConsentInitialized,
-    pushEvent: (eventName, parameters) => {
+    pushEvent: useCallback((eventName: string, parameters?: Record<string, any>) => {
       if (shouldLoad && isConsentInitialized) {
         pushEvent(eventName, parameters);
         if (debug) {
           console.log('📤 Event pushed:', eventName, parameters);
         }
       }
-    },
-    pushPageView: (url, title) => {
+    }, [shouldLoad, isConsentInitialized, debug]),
+    pushPageView: useCallback((url?: string, title?: string) => {
       if (shouldLoad && isConsentInitialized) {
         pushPageViewCore(url, title);
         if (debug) {
           console.log('📄 Page view:', url || window.location.href);
         }
       }
-    },
-    updateConsent: (settings) => {
-      updateConsentCore(settings as Record<string, any>);
-      if (debug) {
-        console.log('🔐 Consent updated:', settings);
-      }
-    }
+    }, [shouldLoad, isConsentInitialized, debug]),
+    updateConsent: updateConsentStable
   };
 
   if (!shouldLoad) {

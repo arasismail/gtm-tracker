@@ -23,9 +23,9 @@ export function initializeConsent(defaultSettings: Record<string, unknown>) {
   });
   
   // gtag fonksiyonunu initialize et
-  window.gtag = window.gtag || function(...args: any[]) {
+  window.gtag = window.gtag || function(...args: unknown[]) {
     window.dataLayer = window.dataLayer || [];
-    window.dataLayer.push(arguments);
+    window.dataLayer.push(args);
   };
   
   // gtag ile de consent'i ayarla
@@ -59,13 +59,20 @@ export function pushEvent(eventName: string, parameters?: Record<string, unknown
 export function updateConsent(consentSettings: Record<string, unknown>) {
   if (typeof window === 'undefined') return;
   
-  window.gtag = window.gtag || function(...args: any[]) {
+  window.gtag = window.gtag || function(...args: unknown[]) {
     window.dataLayer = window.dataLayer || [];
-    window.dataLayer.push(arguments);
+    window.dataLayer.push(args);
   };
   
+  // Sadece gtag consent update yap, ayrıca event push etme (duplicate önleme)
   window.gtag('consent', 'update', consentSettings);
-  pushEvent('consent_update', consentSettings);
+  
+  // consent_update event'i otomatik olarak GTM tarafından oluşturulacak
+  // Manuel push kaldırıldı çünkü duplicate'e neden oluyor
+  
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔐 Consent updated via gtag:', consentSettings);
+  }
 }
 
 /**
