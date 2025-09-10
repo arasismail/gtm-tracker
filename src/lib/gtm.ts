@@ -64,11 +64,14 @@ export function updateConsent(consentSettings: Record<string, unknown>) {
     window.dataLayer.push(args);
   };
   
-  // Sadece gtag consent update yap, ayrıca event push etme (duplicate önleme)
+  // gtag ile consent'i güncelle
   window.gtag('consent', 'update', consentSettings);
   
-  // consent_update event'i otomatik olarak GTM tarafından oluşturulacak
-  // Manuel push kaldırıldı çünkü duplicate'e neden oluyor
+  // consent_update event'ini manuel olarak gönder
+  // GTMProvider'daki duplicate kontrolü sayesinde tekrar etmeyecek
+  pushEvent('consent_update', {
+    consent_settings: consentSettings
+  });
   
   if (process.env.NODE_ENV === 'development') {
     console.log('🔐 Consent updated via gtag:', consentSettings);
