@@ -11,14 +11,25 @@ const packageJson = JSON.parse(readFileSync('./package.json', 'utf-8'));
 // 'use client' directive'ini koruyacak plugin
 const preserveDirectives = () => ({
   name: 'preserve-directives',
+  transform(code, id) {
+    // TypeScript dosyalarında 'use client' directive'ini koru
+    if (id.endsWith('.tsx') || id.endsWith('.ts')) {
+      const hasUseClient = code.startsWith("'use client'") || code.startsWith('"use client"');
+      if (hasUseClient) {
+        // Transform aşamasında comment olarak işaretle
+        return {
+          code: code.replace(/^['"]use client['"];?\s*/, '/* __USE_CLIENT__ */'),
+          map: null
+        };
+      }
+    }
+    return null;
+  },
   renderChunk(code, chunk) {
-    // Dosya başında 'use client' varsa koru
-    const hasUseClient = code.includes("'use client'") || code.includes('"use client"');
-    if (hasUseClient) {
-      // Mevcut directive'i temizle ve başa ekle
-      const cleanCode = code.replace(/['"]use client['"];?\s*/g, '');
+    // Render aşamasında comment'i gerçek directive'e çevir
+    if (code.includes('/* __USE_CLIENT__ */')) {
       return {
-        code: `'use client';\n${cleanCode}`,
+        code: `'use client';\n` + code.replace(/\/\* __USE_CLIENT__ \*\/\s*/, ''),
         map: null
       };
     }
@@ -35,15 +46,13 @@ export default [
         file: packageJson.main,
         format: 'cjs',
         sourcemap: true,
-        exports: 'named',
-        banner: "'use client';"
+        exports: 'named'
       },
       {
         file: packageJson.module,
         format: 'esm',
         sourcemap: true,
-        exports: 'named',
-        banner: "'use client';"
+        exports: 'named'
       }
     ],
     plugins: [
@@ -53,21 +62,22 @@ export default [
         preferBuiltins: false
       }),
       commonjs(),
+      // Önce directive'leri koru
+      preserveDirectives(),
       typescript({ 
         tsconfig: './tsconfig.json',
         declaration: true,
         declarationDir: 'dist',
         exclude: ['**/*.test.ts', '**/*.test.tsx']
       }),
-      // Directive'leri koru
-      preserveDirectives(),
       // Terser'da directive'leri korumayı sağla
       terser({
         compress: {
           directives: false, // Directive'leri silme
-          keep_fnames: true  // Function isimlerini koru
         },
-        mangle: false // İsimleri karıştırma (opsiyonel)
+        format: {
+          preamble: "'use client';" // Her dosyanın başına ekle
+        }
       })
     ],
     external: [
@@ -78,7 +88,14 @@ export default [
       'next/script', 
       'next/navigation', 
       'js-cookie'
-    ]
+    ],
+    onwarn: (warning, warn) => {
+      // 'use client' directive uyarılarını sustur
+      if (warning.code === 'MODULE_LEVEL_DIRECTIVE') {
+        return;
+      }
+      warn(warning);
+    }
   },
   // Type definitions build
   {

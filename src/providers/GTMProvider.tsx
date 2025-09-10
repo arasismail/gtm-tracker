@@ -1,100 +1,152 @@
 // src/providers/GTMProvider.tsx
 'use client';
 
-import * as React from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import Script from 'next/script';
-import { ConsentSettings } from '../types';
-import { isClient } from '../utils/isClient';
-import { 
-  initializeConsent, 
-  pushEvent, 
-  pushPageView as pushPageViewCore,
-  updateConsent as updateConsentCore 
-} from '../lib/gtm';
-import { DEFAULT_CONSENT_SETTINGS } from '../constants';
+import { initializeConsent, pushEvent, pushPageView as pushPageViewCore, updateConsent as updateConsentCore } from '../lib/gtm';
 
-const { createContext, useContext, useEffect, useState, useRef, useCallback } = React;
-
-interface GTMContextValue {
-  gtmId: string;
+export interface GTMContextType {
+  isLoaded: boolean;
   pushEvent: (eventName: string, parameters?: Record<string, any>) => void;
   pushPageView: (url?: string, title?: string) => void;
-  updateConsent: (settings: Record<string, any>) => void;
-  isConsentInitialized: boolean; // Yeni eklendi
+  updateConsent: (consentSettings: Record<string, any>) => void;
 }
 
-const GTMContext = createContext<GTMContextValue | undefined>(undefined);
+const GTMContext = createContext<GTMContextType | undefined>(undefined);
 
-interface GTMProviderProps {
-  children: React.ReactNode;
+export interface GTMProviderProps {
   gtmId: string;
+  children: React.ReactNode;
   debug?: boolean;
   enableInDevelopment?: boolean;
-  defaultConsent?: ConsentSettings;
+  defaultConsent?: Record<string, any>;
   nonce?: string;
 }
 
 export function GTMProvider({
-  children,
   gtmId,
+  children,
   debug = false,
   enableInDevelopment = false,
-  defaultConsent = DEFAULT_CONSENT_SETTINGS,
+  defaultConsent = {
+    analytics_storage: 'denied',
+    ad_storage: 'denied',
+    ad_user_data: 'denied',
+    ad_personalization: 'denied',
+    functionality_storage: 'granted',
+    security_storage: 'granted'
+  },
   nonce
 }: GTMProviderProps) {
+  const [isLoaded, setIsLoaded] = useState(false);
   const [isConsentInitialized, setIsConsentInitialized] = useState(false);
-  const [shouldLoadGTM, setShouldLoadGTM] = useState(false);
-  const isInitialized = useRef(false);
-  const lastConsentState = useRef<string>('');
   
-  const shouldLoad = process.env.NODE_ENV === 'production' || enableInDevelopment;
+  const shouldLoad = useMemo(() => {
+    return enableInDevelopment || process.env.NODE_ENV === 'production';
+  }, [enableInDevelopment]);
 
-  // İlk olarak consent'i initialize et - Sadece bir kez çalışacak
+  // CRITICALLY IMPORTANT: Initialize consent BEFORE GTM loads
   useEffect(() => {
-    if (!isClient || !shouldLoad || isInitialized.current) return;
-    
-    isInitialized.current = true; // Sadece 1 kez çalışmasını garantile
-    
-    // Consent'i hemen ayarla
-    initializeConsent(defaultConsent as Record<string, any>);
-    setIsConsentInitialized(true);
-    
-    if (debug) {
-      console.log('🔐 Consent initialized with:', defaultConsent);
-    }
-    
-    // GTM'i hemen yükle (timeout olmadan)
-    setShouldLoadGTM(true);
-    
-    if (debug) {
-      console.log('🚀 GTM loading after consent initialization');
-    }
-  }, []); // Boş dependency array - tek seferlik çalışır
-
-  // Stable updateConsent with duplicate check
-  const updateConsentStable = useCallback((settings: Record<string, any>) => {
-    const settingsStr = JSON.stringify(settings);
-    
-    // Duplicate kontrolü - aynı consent tekrar gönderilmesin
-    if (lastConsentState.current === settingsStr) {
+    if (shouldLoad && typeof window !== 'undefined' && !isConsentInitialized) {
+      // 1. FIRST: Initialize consent with denied state
+      window.dataLayer = window.dataLayer || [];
+      
+      // Define gtag function if not exists
+      window.gtag = window.gtag || function(...args: any[]) {
+        window.dataLayer!.push(args);
+      };
+      
+      // Push consent default BEFORE GTM loads
+      window.gtag('consent', 'default', {
+        ...defaultConsent,
+        wait_for_update: 500 // Wait up to 500ms for consent update
+      });
+      
+      // Also push as an event for visibility in dataLayer
+      window.dataLayer.push({
+        event: 'consent_default',
+        consent_settings: defaultConsent
+      });
+      
       if (debug) {
-        console.log('🔐 Consent already in this state, skipping update');
+        console.log('🔐 Consent initialized BEFORE GTM:', defaultConsent);
+        console.log('📊 DataLayer after consent init:', window.dataLayer);
       }
-      return;
+      
+      setIsConsentInitialized(true);
     }
+  }, [shouldLoad, defaultConsent, debug, isConsentInitialized]);
+
+  // Load GTM script AFTER consent is initialized
+  const shouldLoadGTM = shouldLoad && isConsentInitialized;
+
+  // GTM onLoad handler
+  useEffect(() => {
+    if (!shouldLoadGTM) return;
+
+    const handleGTMLoad = () => {
+      setIsLoaded(true);
+      
+      if (debug) {
+        console.log('🚀 GTM loaded successfully with ID:', gtmId);
+        console.log('📊 Current dataLayer:', window.dataLayer);
+      }
+      
+      // Push initial page view after GTM loads
+      pushPageViewCore();
+    };
+
+    // Check if GTM is already loaded
+    if (window.dataLayer && window.dataLayer.find((item: any) => item.event === 'gtm.js')) {
+      handleGTMLoad();
+    } else {
+      // Listen for GTM load event
+      const checkInterval = setInterval(() => {
+        if (window.dataLayer && window.dataLayer.find((item: any) => item.event === 'gtm.js')) {
+          clearInterval(checkInterval);
+          handleGTMLoad();
+        }
+      }, 100);
+
+      // Cleanup after 5 seconds
+      setTimeout(() => clearInterval(checkInterval), 5000);
+    }
+  }, [shouldLoadGTM, gtmId, debug]);
+
+  // Memoized update consent function
+  const updateConsentStable = useCallback((consentSettings: Record<string, any>) => {
+    if (!shouldLoad || !isConsentInitialized) return;
     
-    lastConsentState.current = settingsStr;
-    updateConsentCore(settings);
+    // Use gtag to update consent
+    window.gtag = window.gtag || function(...args: any[]) {
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push(args);
+    };
+    
+    // Update consent via gtag
+    window.gtag('consent', 'update', consentSettings);
+    
+    // Also push as event for tracking
+    pushEvent('consent_update', {
+      consent_settings: consentSettings,
+      timestamp: new Date().toISOString()
+    });
     
     if (debug) {
-      console.log('🔐 Consent updated:', settings);
+      console.log('🔐 Consent updated:', consentSettings);
+      console.log('📊 DataLayer after update:', window.dataLayer);
     }
-  }, [debug]);
+    
+    // Trigger GTM to re-evaluate tags
+    // This helps tags that were waiting for consent to fire
+    if (window.dataLayer) {
+      window.dataLayer.push({ event: 'gtm.init_consent' });
+    }
+  }, [shouldLoad, isConsentInitialized, debug]);
 
-  // Context value
-  const contextValue: GTMContextValue = {
-    gtmId,
-    isConsentInitialized,
+  // Context value with memoization
+  const contextValue: GTMContextType = {
+    isLoaded,
     pushEvent: useCallback((eventName: string, parameters?: Record<string, any>) => {
       if (shouldLoad && isConsentInitialized) {
         pushEvent(eventName, parameters);
@@ -120,7 +172,7 @@ export function GTMProvider({
 
   return (
     <GTMContext.Provider value={contextValue}>
-      {/* GTM Script - Sadece consent initialize edildikten sonra yükle */}
+      {/* GTM Script - Only load AFTER consent is initialized */}
       {shouldLoadGTM && (
         <>
           <Script
@@ -138,7 +190,7 @@ export function GTMProvider({
             }}
           />
           
-          {/* GTM noscript */}
+          {/* GTM noscript fallback */}
           <noscript>
             <iframe
               src={`https://www.googletagmanager.com/ns.html?id=${gtmId}`}
